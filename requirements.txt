@@ -1,0 +1,13 @@
+torch >= 2.0.0
+gymnasium
+stable-baselines3[extra]
+opencv-python
+numpy
+matplotlib
+webbrowser
+mss
+json
+time
+pyscreenshot
+pytesseract
+pyautogui
