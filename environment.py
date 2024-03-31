@@ -1,0 +1,123 @@
+"""Contains the environment class for the game."""
+import time
+import cv2
+import os
+import numpy as np
+import torch    # for reinforcement learning
+import webbrowser
+import mss
+import json
+import pyscreenshot # for capturing the screen
+import pytesseract  # for the OCR
+import pyautogui    # for the mouse and keyboard control
+import gym
+
+class GameEnv1(gym.Env):
+    """Custom environment for the game.
+    It uses Discrete action space (can use only one key per action)."""
+    def __init__(self):
+        self.action_map = {
+            0: '',
+            1: 'q',
+            2: 'w',
+            3: 'o',
+            4: 'p'
+        }
+        # define the action space (possible model actions) as discrete, choosing integer values from 0 to 4
+        self.action_space = gym.spaces.Discrete(5)
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(32, 50), dtype=np.uint8)
+        self.current_observation = None
+        self.current_screen = None
+        self.ticks_without_progress = 0 # used to determine if it should reset
+        self.previous_reward = 0
+
+    @staticmethod
+    def get_screen():
+        screen = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+        screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
+
+        return screen
+
+    def truncated(self):
+        """Returns if the game is truncated."""
+        if self.ticks_without_progress > 60:
+            return True
+        return False
+
+    @staticmethod
+    def lost(self, screen=None):
+        if screen is None:
+            screen = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+            screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
+
+        x1, x2, y1, y2 = 300, 450, 270, 350
+        screen = screen[y1:y2, x1:x2]
+        text = pytesseract.image_to_string(screen)
+
+        if 'restart' in text.lower():
+            return True
+        return False
+
+
+    @staticmethod
+    def get_observation(screen=None):
+        """Returns the current observation."""
+        if screen is None:
+            screen = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+            screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
+        x1, x2, y1, y2 = 100, 450, 80, 410
+        screen = screen[y1:y2, x1:x2]
+        observation = cv2.resize(screen, (50, 32))
+
+        return observation
+
+    @staticmethod
+    def get_reward(observation=None):
+        """Returns the reward."""
+        if observation is None:
+            observation = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+            observation = cv2.cvtColor(np.array(observation), cv2.COLOR_BGR2GRAY)
+        x1, x2, y1, y2 = 200, 450, 30, 80
+        score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
+
+        return float(score.split(' ')[0])
+
+    def step(self, action):
+        """Takes action as argument and returns the next observation, reward, done and info."""
+        action = int(action)
+        pyautogui.press(self.action_map[action])
+        print(f'Action: {self.action_map[action]}')
+
+        self.current_screen = self.get_screen()
+        self.current_observation = self.get_observation(self.current_screen)
+        reward = self.get_reward(self.current_screen)
+        info = {}
+        terminated = self.lost(self.current_screen)
+        truncated = self.truncated()
+
+        if self.previous_reward > reward:
+            self.ticks_without_progress += 1
+        if self.previous_reward - reward < 0.2:
+            self.ticks_without_progress += 1
+        if self.previous_reward - reward >= 0.2:
+            self.ticks_without_progress = 0
+
+        self.previous_reward = reward
+
+        return self.current_observation, reward, terminated, truncated, info
+
+    def reset(self, seed=None, options=None):
+        """Resets the environment and returns the initial observation."""
+        pyautogui.press('r')
+        print('Game restarted')
+
+        self.current_screen = self.get_screen()
+        self.current_observation = self.get_observation(self.current_screen)
+        self.ticks_without_progress = 0
+        self.previous_reward = 0
+
+        return self.current_observation, {}
+
+    def render(self, mode='human'):
+        """As per specification is mandatory, but not used in this project."""
+        pass
