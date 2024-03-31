@@ -81,10 +81,11 @@ class GameEnv1(gym.Env):
         x1, x2, y1, y2 = 200, 450, 30, 80
         score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
         score = score.split(' ')[0]
-
+        reward = float(score) - self.previous_reward
         if score.lower() == 'o':
-            return 0.0
-        return float(score)
+            reward = 0.0
+
+        return reward
 
     def step(self, action):
         """Takes action as argument and returns the next observation, reward, done and info."""
