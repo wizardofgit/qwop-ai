@@ -10,15 +10,21 @@ class GameEnv1(gym.Env):
     """Custom environment for the game.
     It uses Discrete action space (can use only one key per action)."""
     def __init__(self):
+        # [1,4] - push keys down, [5,8] - release keys
         self.action_map = {
             0: '',
             1: 'q',
             2: 'w',
             3: 'o',
-            4: 'p'
+            4: 'p',
+            5: 'q',
+            6: 'w',
+            7: 'o',
+            8: 'p',
+
         }
         # define the action space (possible model actions) as discrete, choosing integer values from 0 to 4
-        self.action_space = gym.spaces.Discrete(5)
+        self.action_space = gym.spaces.Discrete(9)
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=(50, 32), dtype=np.uint8)
         self.current_observation = None
         self.current_screen = None
@@ -37,6 +43,7 @@ class GameEnv1(gym.Env):
     def truncated(self):
         """Returns if the game is truncated."""
         if self.ticks_without_progress > 30:
+            print("Too long without progress, resetting the game")
             return True
         return False
 
@@ -45,9 +52,12 @@ class GameEnv1(gym.Env):
             screen = self.sct.grab(self.monitor)
             screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
 
-        x1, x2, y1, y2 = 300, 450, 270, 350
+        x1, x2, y1, y2 = 340, 410, 260, 310
         screen = screen[y1:y2, x1:x2]
+        cv2.imshow("Game", screen)
+        cv2.waitKey(1)
         text = pytesseract.image_to_string(screen)
+        print(f"Text: {text}")
 
         if 'restart' in text.lower():
             return True
@@ -71,13 +81,22 @@ class GameEnv1(gym.Env):
             observation = cv2.cvtColor(np.array(observation), cv2.COLOR_BGR2GRAY)
         x1, x2, y1, y2 = 200, 450, 30, 80
         score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
+        score = score.split(' ')[0]
 
+        if score.lower() == 'o':
+            return 0.0
         return float(score.split(' ')[0])
 
     def step(self, action):
         """Takes action as argument and returns the next observation, reward, done and info."""
         action = int(action)
-        pyautogui.press(self.action_map[action])
+
+        if action == 0:
+            pass
+        elif action < 5:
+            pyautogui.keyDown(self.action_map[action])
+        else:
+            pyautogui.keyUp(self.action_map[action])
         print(f'Action: {self.action_map[action]}')
 
         self.current_screen = self.get_screen()

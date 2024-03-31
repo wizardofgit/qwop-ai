@@ -1,16 +1,13 @@
 import time
 import cv2
-import os
 import numpy as np
 import stable_baselines3
 import torch    # for reinforcement learning
 import webbrowser
-import mss
 import json
 import pyscreenshot # for capturing the screen
 import pytesseract  # for the OCR
 import pyautogui    # for the mouse and keyboard control
-import gym
 from environment import GameEnv1
 
 # make sure CUDA is available
@@ -22,7 +19,7 @@ config = json.load(open("config.json"))
 # open the game
 webbrowser.open("http://www.foddy.net/Athletics.html")
 # wait for the game to load
-time.sleep(3)
+time.sleep(5)
 
 # click on the game to activate it
 pyautogui.click(950, 570)   # cords for 1920x1080 screen
@@ -61,7 +58,7 @@ if config['debug'] == 'True':
 if config['debug'] == 'True':
     screen = pyscreenshot.grab(bbox=(630, 360, 1280, 780))  # cords for 1920x1080 screen
     screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
-    x1, x2, y1, y2 = 300, 450, 270, 350
+    x1, x2, y1, y2 = 340, 410, 260, 310
     screen = screen[y1:y2, x1:x2]
     text = pytesseract.image_to_string(screen)
     cv2.imshow("Game", screen)
@@ -75,7 +72,7 @@ env = GameEnv1()
 if config['learning'] == 'True':
     """Start learning process"""
     model = stable_baselines3.DQN("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100)
+    model.learn(total_timesteps=100000)
     model.save("dqn_model")
 else:
     """Start playing with best yet model"""
