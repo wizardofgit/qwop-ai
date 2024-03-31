@@ -1,13 +1,7 @@
 """Contains the environment class for the game."""
-import time
 import cv2
-import os
 import numpy as np
-import torch    # for reinforcement learning
-import webbrowser
 import mss
-import json
-import pyscreenshot # for capturing the screen
 import pytesseract  # for the OCR
 import pyautogui    # for the mouse and keyboard control
 import gym
@@ -25,29 +19,30 @@ class GameEnv1(gym.Env):
         }
         # define the action space (possible model actions) as discrete, choosing integer values from 0 to 4
         self.action_space = gym.spaces.Discrete(5)
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(32, 50), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(50, 32), dtype=np.uint8)
         self.current_observation = None
         self.current_screen = None
         self.ticks_without_progress = 0 # used to determine if it should reset
         self.previous_reward = 0
+        self.sct = mss.mss()
+        self.monitor = {"top": 360, "left": 630, "width": 650, "height": 420}
 
-    @staticmethod
-    def get_screen():
-        screen = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+
+    def get_screen(self):
+        screen = self.sct.grab(self.monitor)
         screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
 
         return screen
 
     def truncated(self):
         """Returns if the game is truncated."""
-        if self.ticks_without_progress > 60:
+        if self.ticks_without_progress > 30:
             return True
         return False
 
-    @staticmethod
     def lost(self, screen=None):
         if screen is None:
-            screen = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+            screen = self.sct.grab(self.monitor)
             screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
 
         x1, x2, y1, y2 = 300, 450, 270, 350
@@ -58,24 +53,21 @@ class GameEnv1(gym.Env):
             return True
         return False
 
-
-    @staticmethod
-    def get_observation(screen=None):
+    def get_observation(self, screen=None):
         """Returns the current observation."""
         if screen is None:
-            screen = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+            screen = self.sct.grab(self.monitor)
             screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
         x1, x2, y1, y2 = 100, 450, 80, 410
         screen = screen[y1:y2, x1:x2]
-        observation = cv2.resize(screen, (50, 32))
+        observation = cv2.resize(screen, (32, 50))
 
         return observation
 
-    @staticmethod
-    def get_reward(observation=None):
+    def get_reward(self, observation=None):
         """Returns the reward."""
         if observation is None:
-            observation = pyscreenshot.grab(bbox=(630, 360, 1280, 780))
+            observation = self.sct.grab(self.monitor)
             observation = cv2.cvtColor(np.array(observation), cv2.COLOR_BGR2GRAY)
         x1, x2, y1, y2 = 200, 450, 30, 80
         score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
