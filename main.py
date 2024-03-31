@@ -71,17 +71,22 @@ env = GameEnv1()
 # determine if we are learning or playing
 if config['learning'] == 'True':
     """Start learning process"""
-    model = stable_baselines3.DQN("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100000)
-    model.save("dqn_model")
+    model = stable_baselines3.PPO("MlpPolicy", env, verbose=1)
+    try:
+        model.learn(total_timesteps=30000)  # 1000 ~ 2 minutes
+    except:
+        model.save("model")
+    finally:
+        model.save("model")
+        print(f"Training took: {time.time() - start_time} seconds.")
 else:
     """Start playing with best yet model"""
-    model = stable_baselines3.DQN.load("dqn_model")
+    model = stable_baselines3.PPO.load("model")
 
     obs, info = env.reset()
-    done = True
-    while done:
-        action, _states = model.predict(obs, deterministic=True)
+    while True:
+        action, _states = model.predict(obs, deterministic=False)
         obs, reward, terminated, truncated, info = env.step(action)
 
-        done = terminated or truncated
+        if terminated or truncated:
+            obs, info = env.reset()

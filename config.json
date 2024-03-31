@@ -1,5 +1,4 @@
 {
-  "fps": 30,
-  "learning": "True",
+  "learning": "False",
   "debug": "False"
 }

@@ -54,10 +54,7 @@ class GameEnv1(gym.Env):
 
         x1, x2, y1, y2 = 340, 410, 260, 310
         screen = screen[y1:y2, x1:x2]
-        cv2.imshow("Game", screen)
-        cv2.waitKey(1)
         text = pytesseract.image_to_string(screen)
-        print(f"Text: {text}")
 
         if 'restart' in text.lower():
             return True
@@ -68,8 +65,10 @@ class GameEnv1(gym.Env):
         if screen is None:
             screen = self.sct.grab(self.monitor)
             screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
-        x1, x2, y1, y2 = 100, 450, 80, 410
+        x1, x2, y1, y2 = 100, 500, 80, 410
         screen = screen[y1:y2, x1:x2]
+        cv2.imshow("Game", screen)
+        cv2.waitKey(1)
         observation = cv2.resize(screen, (32, 50))
 
         return observation
@@ -85,7 +84,7 @@ class GameEnv1(gym.Env):
 
         if score.lower() == 'o':
             return 0.0
-        return float(score.split(' ')[0])
+        return float(score)
 
     def step(self, action):
         """Takes action as argument and returns the next observation, reward, done and info."""
