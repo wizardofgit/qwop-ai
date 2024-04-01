@@ -9,7 +9,7 @@ import gym
 class GameEnv1(gym.Env):
     """Custom environment for the game.
     It uses Discrete action space (can use only one key per action)."""
-    def __init__(self):
+    def __init__(self, debug=False):
         # [1,4] - push keys down, [5,8] - release keys
         self.action_map = {
             0: '',
@@ -32,6 +32,7 @@ class GameEnv1(gym.Env):
         self.previous_reward = 0
         self.sct = mss.mss()
         self.monitor = {"top": 360, "left": 630, "width": 650, "height": 420}
+        self.debug = debug
 
 
     def get_screen(self):
@@ -43,7 +44,8 @@ class GameEnv1(gym.Env):
     def truncated(self):
         """Returns if the game is truncated."""
         if self.ticks_without_progress > 30:
-            print("Too long without progress, resetting the game")
+            if self.debug:
+                print("Too long without progress, resetting the game")
             return True
         return False
 
@@ -67,8 +69,6 @@ class GameEnv1(gym.Env):
             screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
         x1, x2, y1, y2 = 100, 500, 80, 410
         screen = screen[y1:y2, x1:x2]
-        cv2.imshow("Game", screen)
-        cv2.waitKey(1)
         observation = cv2.resize(screen, (32, 50))
 
         return observation
@@ -81,9 +81,10 @@ class GameEnv1(gym.Env):
         x1, x2, y1, y2 = 200, 450, 30, 80
         score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
         score = score.split(' ')[0]
-        reward = float(score) - self.previous_reward
         if score.lower() == 'o':
-            reward = 0.0
+            reward = 0.0 - self.previous_reward
+        else:
+            reward = float(score) - self.previous_reward
 
         return reward
 
@@ -120,7 +121,8 @@ class GameEnv1(gym.Env):
     def reset(self, seed=None, options=None):
         """Resets the environment and returns the initial observation."""
         pyautogui.press('r')
-        print('Game restarted')
+        if self.debug:
+            print('Game restarted')
 
         self.current_screen = self.get_screen()
         self.current_observation = self.get_observation(self.current_screen)
