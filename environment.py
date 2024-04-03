@@ -98,7 +98,8 @@ class GameEnv1(gym.Env):
             pyautogui.keyDown(self.action_map[action])
         else:
             pyautogui.keyUp(self.action_map[action])
-        print(f'Action: {self.action_map[action]}')
+        if self.debug:
+            print(f'Action: {self.action_map[action]}')
 
         self.current_screen = self.get_screen()
         self.current_observation = self.get_observation(self.current_screen)
