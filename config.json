@@ -1,5 +1,9 @@
 {
   "learning": "True",
   "debug": "False",
-  "overwrite": "True"
+  "cords": {
+    "observation": [100, 500, 80, 410],
+    "reward": [200, 450, 30, 80],
+    "lost": [200, 450, 110, 160]
+  }
 }

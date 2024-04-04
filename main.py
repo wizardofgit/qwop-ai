@@ -8,18 +8,12 @@ import pyautogui    # for the mouse and keyboard control
 from environment import GameEnv1
 from debug import Debugger
 
-
-
 # open config
 config = json.load(open("config.json"))
 
 # make sure CUDA is available
 if config['debug'] == 'True':
     print(f"Is CUDA available? {torch.cuda.is_available()}, GPU: {torch.cuda.get_device_name(0)}")
-
-if config['learning'] == 'True':
-    if input("Are you sure you want the learning process to start? Type 'yes' to confirm: ").lower() != 'yes':
-        exit()
 
 # open the game
 webbrowser.open("http://www.foddy.net/Athletics.html")
@@ -30,12 +24,16 @@ time.sleep(6)
 pyautogui.click(950, 570)   # cords for 1920x1080 screen
 
 if config['debug'] == 'True':
-    Debugger(True).debug()
+    Debugger(True).start_debug()
+    exit()
 
 # create the environment
 env = GameEnv1()
-total_training_time = 8*60*60  # 8 hours in seconds
+total_training_time = 60*60  # 1 hour in seconds
 done = False
+
+model_save = "model_1h"
+model_load = ""
 
 # determine if we are learning or playing
 if config['learning'] == 'True':
@@ -43,31 +41,28 @@ if config['learning'] == 'True':
     start_time = time.time()
     model = stable_baselines3.PPO("MlpPolicy", env, verbose=1)
 
-    # remove the existing model to start new training session
-    if os.path.exists("model.zip") and config['overwrite'] == 'True':
-        os.remove("model.zip")
+    if os.path.exists(model_load) and model_load != "":
+        model = stable_baselines3.PPO.load(model_load)
+        print(f"Model {model_load} loaded")
 
     remaining_time = total_training_time
     remaining_timesteps = int(total_training_time * 8)  # ~ 8 timestep per 1 second
 
     while not done:
         try:
-            # override model if it exists (continue training existing model after error or break)
-            if os.path.exists("model.zip"):
-                model = stable_baselines3.PPO.load("model")
-
             model.learn(total_timesteps=remaining_timesteps)  # 1000 ~ 2 minutes
             done = True
-            model.save("model")
+            model.save(model_save)
             break
         except Exception as e:
             print(f"Error: {e}")
-            model.save("model")
+            model.save(model_save)
 
             remaining_time = total_training_time - (time.time() - start_time)
             remaining_timesteps = int(remaining_time*8)
 
-    model.save("model")
+    print(f"Learning session completed. Time elapsed: {time.time() - start_time} seconds")
+    model.save(model_save)
 else:
     """Start playing with model"""
     model = stable_baselines3.PPO.load("model")

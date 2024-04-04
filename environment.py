@@ -3,12 +3,15 @@ import cv2
 import numpy as np
 import mss
 import pytesseract  # for the OCR
-import pyautogui    # for the mouse and keyboard control
+import pyautogui  # for the mouse and keyboard control
 import gym
+import json
+
 
 class GameEnv1(gym.Env):
     """Custom environment for the game.
     It uses Discrete action space (can use only one key per action)."""
+
     def __init__(self, debug=False):
         # [1,4] - push keys down, [5,8] - release keys
         self.action_map = {
@@ -28,12 +31,12 @@ class GameEnv1(gym.Env):
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=(50, 32), dtype=np.uint8)
         self.current_observation = None
         self.current_screen = None
-        self.ticks_without_progress = 0 # used to determine if it should reset
-        self.previous_reward = 0
+        self.ticks_without_progress = 0  # used to determine if it should reset
+        self.previous_score = 0
         self.sct = mss.mss()
         self.monitor = {"top": 360, "left": 630, "width": 650, "height": 420}
         self.debug = debug
-
+        self.config = json.load(open("config.json"))
 
     def get_screen(self):
         screen = self.sct.grab(self.monitor)
@@ -43,7 +46,7 @@ class GameEnv1(gym.Env):
 
     def truncated(self):
         """Returns if the game is truncated."""
-        if self.ticks_without_progress > 30:
+        if self.ticks_without_progress > 60:
             if self.debug:
                 print("Too long without progress, resetting the game")
             return True
@@ -54,11 +57,17 @@ class GameEnv1(gym.Env):
             screen = self.sct.grab(self.monitor)
             screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
 
-        x1, x2, y1, y2 = 340, 410, 260, 310
+        lost_cords = self.config['cords']['lost']
+        x1 = lost_cords[0]
+        x2 = lost_cords[1]
+        y1 = lost_cords[2]
+        y2 = lost_cords[3]
         screen = screen[y1:y2, x1:x2]
         text = pytesseract.image_to_string(screen)
 
-        if 'restart' in text.lower():
+        if 'participant' in text.lower():
+            if self.debug:
+                print(f"Game lost: {text}")
             return True
         return False
 
@@ -67,7 +76,13 @@ class GameEnv1(gym.Env):
         if screen is None:
             screen = self.sct.grab(self.monitor)
             screen = cv2.cvtColor(np.array(screen), cv2.COLOR_BGR2GRAY)
-        x1, x2, y1, y2 = 100, 500, 80, 410
+
+        observation_cords = self.config['cords']['observation']
+        x1 = observation_cords[0]
+        x2 = observation_cords[1]
+        y1 = observation_cords[2]
+        y2 = observation_cords[3]
+
         screen = screen[y1:y2, x1:x2]
         observation = cv2.resize(screen, (32, 50))
 
@@ -78,13 +93,23 @@ class GameEnv1(gym.Env):
         if observation is None:
             observation = self.sct.grab(self.monitor)
             observation = cv2.cvtColor(np.array(observation), cv2.COLOR_BGR2GRAY)
-        x1, x2, y1, y2 = 200, 450, 30, 80
+
+        reward_cords = self.config['cords']['reward']
+        x1 = reward_cords[0]
+        x2 = reward_cords[1]
+        y1 = reward_cords[2]
+        y2 = reward_cords[3]
         score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
         score = score.split(' ')[0]
         if score.lower() == 'o':
-            reward = 0.0 - self.previous_reward
+            reward = 0.0 - self.previous_score
+            self.previous_score = 0.0
         else:
-            reward = float(score) - self.previous_reward
+            reward = float(score) - self.previous_score
+            self.previous_score = float(score)
+
+        if self.debug:
+            print(f"Score: {score}, Reward: {reward}")
 
         return reward
 
@@ -108,14 +133,14 @@ class GameEnv1(gym.Env):
         terminated = self.lost(self.current_screen)
         truncated = self.truncated()
 
-        if self.previous_reward > reward:
+        if self.previous_score > reward:
             self.ticks_without_progress += 1
-        if self.previous_reward - reward < 0.2:
+        if self.previous_score - reward < 0.2:
             self.ticks_without_progress += 1
-        if self.previous_reward - reward >= 0.2:
+        if self.previous_score - reward >= 0.2:
             self.ticks_without_progress = 0
 
-        self.previous_reward = reward
+        self.previous_score = reward
 
         return self.current_observation, reward, terminated, truncated, info
 
@@ -128,7 +153,7 @@ class GameEnv1(gym.Env):
         self.current_screen = self.get_screen()
         self.current_observation = self.get_observation(self.current_screen)
         self.ticks_without_progress = 0
-        self.previous_reward = 0
+        self.previous_score = 0
 
         return self.current_observation, {}
 
