@@ -1,5 +1,5 @@
 {
-  "learning": "False",
+  "learning": "True",
   "debug": "False",
   "cords": {
     "observation": [100, 500, 80, 410],

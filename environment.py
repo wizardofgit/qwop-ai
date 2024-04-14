@@ -37,6 +37,7 @@ class GameEnv1(gym.Env):
         self.monitor = {"top": 360, "left": 630, "width": 650, "height": 420}
         self.debug = debug
         self.config = json.load(open("config.json"))
+        self.no_progress_coef = 2 # how much to penalize for no progress
 
     def get_screen(self):
         screen = self.sct.grab(self.monitor)
@@ -100,13 +101,22 @@ class GameEnv1(gym.Env):
         y1 = reward_cords[2]
         y2 = reward_cords[3]
         score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
-        score = score.split(' ')[0]
-        if score.lower() == 'o':
-            reward = 0.0 - self.previous_score
-            self.previous_score = 0.0
+        score = float(score.split(' ')[0])
+
+        if score > self.previous_score:
+            self.ticks_without_progress = 0
+
+            if score > 0:
+                reward = score
+            else:
+                reward = score * -1
         else:
-            reward = float(score) - self.previous_score
-            self.previous_score = float(score)
+            if score > 0:
+                reward = score * -1
+            else:
+                reward = score
+
+        reward -= self.no_progress_coef * self.ticks_without_progress
 
         if self.debug:
             print(f"Score: {score}, Reward: {reward}")

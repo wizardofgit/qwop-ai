@@ -28,12 +28,13 @@ if config['debug'] == 'True':
     exit()
 
 # create the environment
-env = GameEnv1()
+env = GameEnv1(True)
 total_training_time = 8*60*60  # 8 hours in seconds
+timestep_coef = 7
 done = False
 
-model_save = "model_8h"
-model_load = "model_8h"
+model_save = "temp"
+model_load = ""
 
 # determine if we are learning or playing
 if config['learning'] == 'True':
@@ -46,7 +47,7 @@ if config['learning'] == 'True':
         print(f"Model {model_load} loaded")
 
     remaining_time = total_training_time
-    remaining_timesteps = int(total_training_time * 8)  # ~ 8 timestep per 1 second
+    remaining_timesteps = int(total_training_time * timestep_coef)  # ~ 8 timestep per 1 second
 
     while not done:
         try:
@@ -59,7 +60,7 @@ if config['learning'] == 'True':
             model.save(model_save)
 
             remaining_time = total_training_time - (time.time() - start_time)
-            remaining_timesteps = int(remaining_time*8)
+            remaining_timesteps = int(remaining_time * timestep_coef)
 
     print(f"Learning session completed. Time elapsed: {time.time() - start_time} seconds")
     model.save(model_save)
