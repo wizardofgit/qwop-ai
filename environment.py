@@ -46,7 +46,7 @@ class GameEnv1(gym.Env):
 
     def truncated(self):
         """Returns if the game is truncated."""
-        if self.ticks_without_progress > 60:
+        if self.ticks_without_progress > 20:
             if self.debug:
                 print("Too long without progress, resetting the game")
             return True

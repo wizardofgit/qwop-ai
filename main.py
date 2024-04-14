@@ -29,11 +29,11 @@ if config['debug'] == 'True':
 
 # create the environment
 env = GameEnv1()
-total_training_time = 60*60  # 1 hour in seconds
+total_training_time = 8*60*60  # 8 hours in seconds
 done = False
 
-model_save = "model_1h"
-model_load = ""
+model_save = "model_8h"
+model_load = "model_8h"
 
 # determine if we are learning or playing
 if config['learning'] == 'True':
@@ -41,7 +41,7 @@ if config['learning'] == 'True':
     start_time = time.time()
     model = stable_baselines3.PPO("MlpPolicy", env, verbose=1)
 
-    if os.path.exists(model_load) and model_load != "":
+    if model_load != "":
         model = stable_baselines3.PPO.load(model_load)
         print(f"Model {model_load} loaded")
 
@@ -65,7 +65,7 @@ if config['learning'] == 'True':
     model.save(model_save)
 else:
     """Start playing with model"""
-    model = stable_baselines3.PPO.load("model")
+    model = stable_baselines3.PPO.load(model_load+".zip")
 
     obs, info = env.reset()
     while True:
