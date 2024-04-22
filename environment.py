@@ -37,7 +37,10 @@ class GameEnv1(gym.Env):
         self.monitor = {"top": 360, "left": 630, "width": 650, "height": 420}
         self.debug = debug
         self.config = json.load(open("config.json"))
-        self.no_progress_coef = 2 # how much to penalize for no progress
+        self.no_progress_coef = 0.1 # how much to penalize for no progress
+        self.best_score = 0.0
+        self.best_score_coef = 1.5 # how much to multiply the reward if the score beats the best so far
+        self.score_offset = 0.2 # minimal score difference to consider it as progress
 
     def get_screen(self):
         screen = self.sct.grab(self.monitor)
@@ -47,7 +50,7 @@ class GameEnv1(gym.Env):
 
     def truncated(self):
         """Returns if the game is truncated."""
-        if self.ticks_without_progress > 20:
+        if self.ticks_without_progress > 5:
             if self.debug:
                 print("Too long without progress, resetting the game")
             return True
@@ -101,9 +104,13 @@ class GameEnv1(gym.Env):
         y1 = reward_cords[2]
         y2 = reward_cords[3]
         score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
-        score = float(score.split(' ')[0])
 
-        if score > self.previous_score:
+        try:
+            score = float(score)
+        except ValueError:
+            score = 0.0
+
+        if score - self.previous_score > self.score_offset:
             self.ticks_without_progress = 0
 
             if score > 0:
@@ -116,7 +123,13 @@ class GameEnv1(gym.Env):
             else:
                 reward = score
 
-        reward -= self.no_progress_coef * self.ticks_without_progress
+            reward -= self.no_progress_coef * self.ticks_without_progress
+
+        if reward - self.best_score > self.score_offset:
+            self.best_score = reward
+            reward *= self.best_score_coef
+
+        self.previous_score = score
 
         if self.debug:
             print(f"Score: {score}, Reward: {reward}")
@@ -145,12 +158,12 @@ class GameEnv1(gym.Env):
 
         if self.previous_score > reward:
             self.ticks_without_progress += 1
-        if self.previous_score - reward < 0.2:
+        if self.previous_score - reward < self.score_offset:
             self.ticks_without_progress += 1
-        if self.previous_score - reward >= 0.2:
+        if self.previous_score - reward >= self.score_offset:
             self.ticks_without_progress = 0
 
-        self.previous_score = reward
+
 
         return self.current_observation, reward, terminated, truncated, info
 

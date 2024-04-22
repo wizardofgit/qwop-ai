@@ -29,12 +29,12 @@ if config['debug'] == 'True':
 
 # create the environment
 env = GameEnv1(True)
-total_training_time = 8*60*60  # 8 hours in seconds
-timestep_coef = 7
+total_training_time = 60*60*8  # time in seconds
+timestep_coef = 2
 done = False
 
-model_save = "temp"
-model_load = ""
+model_save = "model"
+model_load = "model7"
 
 # determine if we are learning or playing
 if config['learning'] == 'True':
@@ -47,30 +47,42 @@ if config['learning'] == 'True':
         print(f"Model {model_load} loaded")
 
     remaining_time = total_training_time
-    remaining_timesteps = int(total_training_time * timestep_coef)  # ~ 8 timestep per 1 second
+    remaining_timesteps = int(total_training_time * timestep_coef)
 
     while not done:
         try:
-            model.learn(total_timesteps=remaining_timesteps)  # 1000 ~ 2 minutes
+            model.learn(total_timesteps=remaining_timesteps)
             done = True
-            model.save(model_save)
+            break
+        except KeyboardInterrupt:
+            print("Model saved")
+            elapsed_time = time.time() - start_time
+            if model_load != "":
+                model.save(model_load + "+" + str(int(elapsed_time / 3600)))
+            else:
+                model.save(model_save + str(int(elapsed_time / 3600)))
+            done = True
             break
         except Exception as e:
             print(f"Error: {e}")
-            model.save(model_save)
+            model.save("temp")
 
             remaining_time = total_training_time - (time.time() - start_time)
             remaining_timesteps = int(remaining_time * timestep_coef)
 
-    print(f"Learning session completed. Time elapsed: {time.time() - start_time} seconds")
-    model.save(model_save)
+    elapsed_time = time.time() - start_time
+    print(f"Learning session completed. Time elapsed: {elapsed_time} seconds")
+    if model_load != "":
+        model.save("model" + model_load[-1] +  "+" + str(int(elapsed_time / 3600)))
+    else:
+        model.save(model_save + str(int(elapsed_time / 3600)))
 else:
     """Start playing with model"""
     model = stable_baselines3.PPO.load(model_load+".zip")
 
     obs, info = env.reset()
     while True:
-        action, _states = model.predict(obs, deterministic=False)
+        action, _states = model.predict(obs)
         obs, reward, terminated, truncated, info = env.step(action)
 
         if terminated or truncated:
