@@ -37,10 +37,10 @@ class GameEnv1(gym.Env):
         self.monitor = {"top": 360, "left": 630, "width": 650, "height": 420}
         self.debug = debug
         self.config = json.load(open("config.json"))
-        self.no_progress_coef = 0.1 # how much to penalize for no progress
+        self.no_progress_coef = 0.1  # how much to penalize for no progress
         self.best_score = 0.0
-        self.best_score_coef = 1.5 # how much to multiply the reward if the score beats the best so far
-        self.score_offset = 0.2 # minimal score difference to consider it as progress
+        self.best_score_coef = 1.5  # how much to multiply the reward if the score beats the best so far
+        self.score_offset = 0.1  # minimal score difference to consider it as progress
 
     def get_screen(self):
         screen = self.sct.grab(self.monitor)
@@ -50,7 +50,7 @@ class GameEnv1(gym.Env):
 
     def truncated(self):
         """Returns if the game is truncated."""
-        if self.ticks_without_progress > 5:
+        if self.ticks_without_progress > 10:
             if self.debug:
                 print("Too long without progress, resetting the game")
             return True
@@ -103,7 +103,7 @@ class GameEnv1(gym.Env):
         x2 = reward_cords[1]
         y1 = reward_cords[2]
         y2 = reward_cords[3]
-        score = pytesseract.image_to_string(observation[y1:y2, x1:x2])
+        score = pytesseract.image_to_string(observation[y1:y2, x1:x2]).split(" ")[0]
 
         try:
             score = float(score)
@@ -155,15 +155,6 @@ class GameEnv1(gym.Env):
         info = {}
         terminated = self.lost(self.current_screen)
         truncated = self.truncated()
-
-        if self.previous_score > reward:
-            self.ticks_without_progress += 1
-        if self.previous_score - reward < self.score_offset:
-            self.ticks_without_progress += 1
-        if self.previous_score - reward >= self.score_offset:
-            self.ticks_without_progress = 0
-
-
 
         return self.current_observation, reward, terminated, truncated, info
 

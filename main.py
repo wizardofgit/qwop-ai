@@ -28,13 +28,13 @@ if config['debug'] == 'True':
     exit()
 
 # create the environment
-env = GameEnv1(True)
+env = GameEnv1()
 total_training_time = 60*60*8  # time in seconds
 timestep_coef = 2
 done = False
 
 model_save = "model"
-model_load = "model7"
+model_load = ""
 
 # determine if we are learning or playing
 if config['learning'] == 'True':
@@ -43,11 +43,13 @@ if config['learning'] == 'True':
     model = stable_baselines3.PPO("MlpPolicy", env, verbose=1)
 
     if model_load != "":
-        model = stable_baselines3.PPO.load(model_load)
+        model.load(model_load)
         print(f"Model {model_load} loaded")
 
     remaining_time = total_training_time
     remaining_timesteps = int(total_training_time * timestep_coef)
+
+    print("Learning commences...")
 
     while not done:
         try:
@@ -58,9 +60,9 @@ if config['learning'] == 'True':
             print("Model saved")
             elapsed_time = time.time() - start_time
             if model_load != "":
-                model.save(model_load + "+" + str(int(elapsed_time / 3600)))
+                model.save(model_load + "+" + str(round(elapsed_time / 3600, 2)))
             else:
-                model.save(model_save + str(int(elapsed_time / 3600)))
+                model.save(model_save + str(round(elapsed_time / 3600, 2)))
             done = True
             break
         except Exception as e:
@@ -73,12 +75,14 @@ if config['learning'] == 'True':
     elapsed_time = time.time() - start_time
     print(f"Learning session completed. Time elapsed: {elapsed_time} seconds")
     if model_load != "":
-        model.save("model" + model_load[-1] +  "+" + str(int(elapsed_time / 3600)))
+        model.save(model_load + "+" + str(round(elapsed_time / 3600, 2)))
     else:
-        model.save(model_save + str(int(elapsed_time / 3600)))
+        model.save(model_save + str(round(elapsed_time / 3600, 2)))
 else:
     """Start playing with model"""
-    model = stable_baselines3.PPO.load(model_load+".zip")
+    model = stable_baselines3.PPO("MlpPolicy", env, verbose=1)
+    model.load(model_load)
+    print(f"Model {model_load} loaded")
 
     obs, info = env.reset()
     while True:
